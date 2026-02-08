@@ -7,6 +7,27 @@
 #define DEFAULT_PIN_DB "/etc/security/pam_pin.db"
 #define DEFAULT_RETRY_DIR "/run/pam_pin"
 
+/* Require absolute paths without ".." segments. */
+static int path_is_absolute_clean(const char *path)
+{
+    const char *p;
+
+    if (path == NULL || path[0] != '/') {
+        return 0;
+    }
+
+    p = path;
+    while ((p = strstr(p, "..")) != NULL) {
+        if ((p == path || p[-1] == '/') && (p[2] == '/' || p[2] == '\0')) {
+            return 0;
+        }
+        p += 2;
+    }
+
+    return 1;
+}
+
+/* Clamp an integer to a fixed range. */
 static int clamp_int(int value, int minv, int maxv)
 {
     /* Keep option values inside a safe, expected range. */
@@ -19,6 +40,7 @@ static int clamp_int(int value, int minv, int maxv)
     return value;
 }
 
+/* Parse a base-10 integer string with strict validation. */
 static int parse_int(const char *value, int *out)
 {
     char *end = NULL;
@@ -43,6 +65,7 @@ static int parse_int(const char *value, int *out)
     return 0;
 }
 
+/* Initialize module options with conservative defaults. */
 void options_set_defaults(module_options *opts)
 {
     /* Conservative defaults: PIN-first auth with bounded retries and delay. */
@@ -58,6 +81,7 @@ void options_set_defaults(module_options *opts)
     opts->retry_dir[sizeof(opts->retry_dir) - 1] = '\0';
 }
 
+/* Override defaults with PAM module arguments. */
 void options_parse(module_options *opts, int argc, const char **argv)
 {
     int i;
@@ -98,14 +122,18 @@ void options_parse(module_options *opts, int argc, const char **argv)
         }
 
         if (strncmp(arg, "pin_db=", 7) == 0) {
-            (void)strncpy(opts->pin_db, eq + 1, sizeof(opts->pin_db) - 1);
-            opts->pin_db[sizeof(opts->pin_db) - 1] = '\0';
+            if (path_is_absolute_clean(eq + 1)) {
+                (void)strncpy(opts->pin_db, eq + 1, sizeof(opts->pin_db) - 1);
+                opts->pin_db[sizeof(opts->pin_db) - 1] = '\0';
+            }
             continue;
         }
 
         if (strncmp(arg, "retry_dir=", 10) == 0) {
-            (void)strncpy(opts->retry_dir, eq + 1, sizeof(opts->retry_dir) - 1);
-            opts->retry_dir[sizeof(opts->retry_dir) - 1] = '\0';
+            if (path_is_absolute_clean(eq + 1)) {
+                (void)strncpy(opts->retry_dir, eq + 1, sizeof(opts->retry_dir) - 1);
+                opts->retry_dir[sizeof(opts->retry_dir) - 1] = '\0';
+            }
             continue;
         }
 

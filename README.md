@@ -28,7 +28,7 @@ auth    sufficient                       pam_unix.so try_first_pass
 
 ## Installation
 
-### 1) Prerequisites (Any Distribution)
+### 1) Prerequisites
 
 Install the required build tools and PAM development headers using your distro package manager.
 
@@ -266,6 +266,10 @@ sudo chmod 600 /etc/security/pam_pin.db
 - The counter is cleared only after a successful login (via any PAM module).
 - `max_tries` is a persistent total: attempts can be consumed in a single session or across multiple sessions.
 - When the count reaches `max_tries`, PIN prompts stop and the flow falls back to password.
+
+## Path Validation
+
+- `pin_db` and `retry_dir` must be absolute paths without `..` segments.
 
 ## Quick Recovery
 

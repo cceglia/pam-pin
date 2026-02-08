@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <string.h>
 
+/* Wipe a buffer using a compiler-resistant zeroing method. */
 void crypto_secure_bzero(void *ptr, size_t len)
 {
     /* Zero sensitive buffers in a way the compiler should not optimize out. */
@@ -18,10 +19,12 @@ void crypto_secure_bzero(void *ptr, size_t len)
 #endif
 }
 
+/* Compare two strings in a timing-safe way when lengths match. */
 static int timing_safe_equal(const char *a, const char *b)
 {
     size_t la;
     size_t lb;
+    size_t max_len;
     size_t i;
     unsigned char diff = 0;
 
@@ -32,21 +35,23 @@ static int timing_safe_equal(const char *a, const char *b)
 
     la = strlen(a);
     lb = strlen(b);
-    if (la != lb) {
-        return 0;
+    max_len = (la > lb) ? la : lb;
+
+    for (i = 0; i < max_len; ++i) {
+        unsigned char ca = (i < la) ? (unsigned char)a[i] : 0;
+        unsigned char cb = (i < lb) ? (unsigned char)b[i] : 0;
+        diff |= (unsigned char)(ca ^ cb);
     }
 
-    for (i = 0; i < la; ++i) {
-        diff |= (unsigned char)(a[i] ^ b[i]);
-    }
-
-    return diff == 0;
+    return diff == 0 && la == lb;
 }
 
+/* Validate that a PIN is numeric and within configured bounds. */
 int crypto_pin_format_valid(const char *pin, int min_len, int max_len)
 {
     size_t i;
     size_t len;
+    int ok = 1;
 
     /* Accept only decimal digits within configured length bounds. */
     if (pin == NULL) {
@@ -55,18 +60,19 @@ int crypto_pin_format_valid(const char *pin, int min_len, int max_len)
 
     len = strlen(pin);
     if (len < (size_t)min_len || len > (size_t)max_len) {
-        return 0;
+        ok = 0;
     }
 
     for (i = 0; i < len; ++i) {
         if (!isdigit((unsigned char)pin[i])) {
-            return 0;
+            ok = 0;
         }
     }
 
-    return 1;
+    return ok;
 }
 
+/* Verify a PIN against a stored hash using crypt(3). */
 int crypto_verify_pin_hash(const char *pin, const char *stored_hash)
 {
     struct crypt_data data;

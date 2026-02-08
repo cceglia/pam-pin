@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +12,8 @@
 
 #define PIN_DB_MAX_LINE 4096
 
-static int db_permissions_ok(const char *db_path)
+/* Ensure the PIN database is a secure, root-owned regular file. */
+static int db_permissions_ok(int fd)
 {
     struct stat st;
 
@@ -19,7 +21,7 @@ static int db_permissions_ok(const char *db_path)
      * The PIN database must be a root-owned regular file with no group/other
      * permissions, to avoid tampering or hash disclosure.
      */
-    if (stat(db_path, &st) != 0) {
+    if (fstat(fd, &st) != 0) {
         return -1;
     }
 
@@ -38,6 +40,7 @@ static int db_permissions_ok(const char *db_path)
     return 0;
 }
 
+/* Strip trailing whitespace from a buffer in place. */
 static void trim_trailing_whitespace(char *s)
 {
     size_t len = strlen(s);
@@ -49,6 +52,7 @@ static void trim_trailing_whitespace(char *s)
     }
 }
 
+/* Consume remaining characters up to the next newline. */
 static void discard_until_eol(FILE *fp)
 {
     int ch;
@@ -58,9 +62,11 @@ static void discard_until_eol(FILE *fp)
     }
 }
 
+/* Look up a user's PIN hash from the database file. */
 int pin_store_lookup_hash(const char *db_path, const char *username, char **hash_out)
 {
     FILE *fp;
+    int fd;
     char line[PIN_DB_MAX_LINE];
     int result = 0;
 
@@ -70,12 +76,19 @@ int pin_store_lookup_hash(const char *db_path, const char *username, char **hash
         return -1;
     }
 
-    if (db_permissions_ok(db_path) != 0) {
+    fd = open(db_path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) {
         return -1;
     }
 
-    fp = fopen(db_path, "re");
+    if (db_permissions_ok(fd) != 0) {
+        close(fd);
+        return -1;
+    }
+
+    fp = fdopen(fd, "re");
     if (fp == NULL) {
+        close(fd);
         return -1;
     }
 

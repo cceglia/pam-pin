@@ -24,6 +24,7 @@ typedef struct retry_cleanup_data {
     int debug;
 } retry_cleanup_data;
 
+/* Emit debug logs only when explicitly enabled. */
 static void maybe_log_debug(pam_handle_t *pamh, const module_options *opts, const char *msg)
 {
     /* Emit debug logs only when the module is explicitly configured with debug. */
@@ -32,6 +33,7 @@ static void maybe_log_debug(pam_handle_t *pamh, const module_options *opts, cons
     }
 }
 
+/* Clear the retry counter after successful authentication. */
 static void retry_cleanup(pam_handle_t *pamh, void *data, int pam_status)
 {
     retry_cleanup_data *info = (retry_cleanup_data *)data;
@@ -49,6 +51,7 @@ static void retry_cleanup(pam_handle_t *pamh, void *data, int pam_status)
     free(info);
 }
 
+/* Perform PIN authentication with persistent retry tracking. */
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
     module_options opts;
@@ -169,6 +172,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
     return PAM_IGNORE;
 }
 
+/* Clear retries after a successful PAM authentication flow. */
 PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
     module_options opts;
@@ -202,6 +206,7 @@ PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const cha
     return PAM_IGNORE;
 }
 
+/* Session open hook (unused for this module). */
 PAM_EXTERN int pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
     (void)flags;
@@ -211,6 +216,7 @@ PAM_EXTERN int pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, cons
     return PAM_IGNORE;
 }
 
+/* Session close hook (unused for this module). */
 PAM_EXTERN int pam_sm_close_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
     (void)pamh;
