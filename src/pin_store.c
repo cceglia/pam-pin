@@ -15,6 +15,10 @@ static int db_permissions_ok(const char *db_path)
 {
     struct stat st;
 
+    /*
+     * The PIN database must be a root-owned regular file with no group/other
+     * permissions, to avoid tampering or hash disclosure.
+     */
     if (stat(db_path, &st) != 0) {
         return -1;
     }
@@ -38,6 +42,7 @@ static void trim_trailing_whitespace(char *s)
 {
     size_t len = strlen(s);
 
+    /* Remove newline and trailing spaces from a line read via fgets. */
     while (len > 0 && isspace((unsigned char)s[len - 1])) {
         s[len - 1] = '\0';
         --len;
@@ -48,6 +53,7 @@ static void discard_until_eol(FILE *fp)
 {
     int ch;
 
+    /* Drop the overflow tail when a DB line exceeds our fixed buffer. */
     while ((ch = fgetc(fp)) != EOF && ch != '\n') {
     }
 }
@@ -73,6 +79,7 @@ int pin_store_lookup_hash(const char *db_path, const char *username, char **hash
         return -1;
     }
 
+    /* Parse lines in the form: username:hash */
     while (fgets(line, sizeof(line), fp) != NULL) {
         char *sep;
         char *user;
@@ -108,6 +115,7 @@ int pin_store_lookup_hash(const char *db_path, const char *username, char **hash
             break;
         }
 
+        /* Copy out the hash so callers can safely close the file immediately. */
         *hash_out = strdup(hash);
         if (*hash_out == NULL) {
             result = -1;

@@ -1,4 +1,4 @@
-# `pam_pin.so` Installation Guide
+# PAM_PIN module
 
 ## Project Overview
 
@@ -21,7 +21,7 @@ The module is intended for Linux systems and can be integrated into PAM stacks s
 Recommended PAM lines:
 
 ```pam
-auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db state_dir=/run/pam-pin fail_delay_ms=500
+auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db fail_delay_ms=500
 auth    sufficient                       pam_unix.so try_first_pass
 ```
 
@@ -107,7 +107,7 @@ PAM file layouts differ across distros and desktop environments. The integration
 Use this `pam_pin.so` line:
 
 ```pam
-auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db state_dir=/run/pam-pin fail_delay_ms=500
+auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db fail_delay_ms=500
 ```
 
 Then ensure the next auth rule is your password handler, for example:

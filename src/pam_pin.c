@@ -17,6 +17,7 @@
 
 static void maybe_log_debug(pam_handle_t *pamh, const module_options *opts, const char *msg)
 {
+    /* Emit debug logs only when the module is explicitly configured with debug. */
     if (opts->debug) {
         pam_syslog(pamh, LOG_DEBUG, "%s", msg);
     }
@@ -34,6 +35,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
 
     (void)flags;
 
+    /* Load module defaults first, then override them with PAM arguments. */
     options_set_defaults(&opts);
     options_parse(&opts, argc, argv);
 
@@ -49,6 +51,11 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
         return PAM_IGNORE;
     }
 
+    /*
+     * Prompt once per attempt using a shared "PIN or Password" field.
+     * If the token is not a numeric PIN, immediately fall through so the next
+     * module (typically pam_unix with try_first_pass) can treat it as password.
+     */
     for (attempt = 1; attempt <= opts.max_tries; ++attempt) {
         int verified;
 
@@ -73,11 +80,13 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
             return PAM_SUCCESS;
         }
 
+        /* Clear cached authtok so a wrong PIN is not reused by downstream modules. */
         if (pam_set_item(pamh, PAM_AUTHTOK, NULL) != PAM_SUCCESS) {
             free(stored_hash);
             return PAM_IGNORE;
         }
 
+        /* Apply a linear backoff delay to slow down online brute-force attempts. */
         if (opts.fail_delay_ms > 0) {
             uint64_t delay_us64 = (uint64_t)opts.fail_delay_ms * (uint64_t)attempt * 1000ULL;
             unsigned int delay_us = (delay_us64 > (uint64_t)UINT_MAX) ? UINT_MAX : (unsigned int)delay_us64;

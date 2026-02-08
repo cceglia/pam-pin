@@ -7,6 +7,7 @@
 
 void crypto_secure_bzero(void *ptr, size_t len)
 {
+    /* Zero sensitive buffers in a way the compiler should not optimize out. */
 #if defined(__GLIBC__) || defined(__FreeBSD__) || defined(__OpenBSD__)
     explicit_bzero(ptr, len);
 #else
@@ -24,6 +25,7 @@ static int timing_safe_equal(const char *a, const char *b)
     size_t i;
     unsigned char diff = 0;
 
+    /* Constant-time style compare for equal-length strings. */
     if (a == NULL || b == NULL) {
         return 0;
     }
@@ -46,6 +48,7 @@ int crypto_pin_format_valid(const char *pin, int min_len, int max_len)
     size_t i;
     size_t len;
 
+    /* Accept only decimal digits within configured length bounds. */
     if (pin == NULL) {
         return 0;
     }
@@ -70,6 +73,7 @@ int crypto_verify_pin_hash(const char *pin, const char *stored_hash)
     char *computed;
     int ok;
 
+    /* Re-hash the candidate PIN using the hash's own algorithm/salt prefix. */
     if (pin == NULL || stored_hash == NULL || *stored_hash == '\0') {
         return 0;
     }
@@ -82,6 +86,7 @@ int crypto_verify_pin_hash(const char *pin, const char *stored_hash)
     }
 
     ok = timing_safe_equal(computed, stored_hash);
+    /* Wipe crypt_r working data regardless of verification result. */
     crypto_secure_bzero(&data, sizeof(data));
     return ok;
 }
