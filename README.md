@@ -16,12 +16,13 @@ The module is intended for Linux systems and can be integrated into PAM stacks s
 - Prompts with a single auth field: `PIN or Password`
 - If the input is a valid PIN format and the PIN hash matches the user entry in the PIN DB, authentication succeeds immediately
 - If the input is not a PIN (or PIN attempts are exhausted), it falls back to the next PAM module (typically password via `pam_unix`)
-- Supports configurable options such as `max_tries`, `fail_delay_ms`, `pin_min_len`, and `pin_max_len`
+- Supports configurable options such as `max_tries`, `fail_delay_ms`, `pin_min_len`, `pin_max_len`, and `retry_dir`
+- Stores per-user PIN failures in a file under `retry_dir` and resets only after a successful login or reboot
 
 Recommended PAM lines:
 
 ```pam
-auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db fail_delay_ms=500
+auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db fail_delay_ms=500 retry_dir=/run/pam_pin
 auth    sufficient                       pam_unix.so try_first_pass
 ```
 
@@ -107,7 +108,7 @@ PAM file layouts differ across distros and desktop environments. The integration
 Use this `pam_pin.so` line:
 
 ```pam
-auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db fail_delay_ms=500
+auth    [success=done default=ignore]   pam_pin.so max_tries=3 pin_db=/etc/security/pam_pin.db fail_delay_ms=500 retry_dir=/run/pam_pin
 ```
 
 Then ensure the next auth rule is your password handler, for example:
@@ -258,6 +259,13 @@ sudo chmod 600 /etc/security/pam_pin.db
 2. Enter a valid PIN: immediate login.
 3. Enter a password in the same field: fallback to password module and login.
 4. After too many wrong PIN attempts (default: 3), fallback to password.
+
+## Retry Persistence
+
+- Per-user retry count is stored under `/run/pam_pin` (tmpfs), so it resets on reboot.
+- The counter is cleared only after a successful login (via any PAM module).
+- `max_tries` is a persistent total: attempts can be consumed in a single session or across multiple sessions.
+- When the count reaches `max_tries`, PIN prompts stop and the flow falls back to password.
 
 ## Quick Recovery
 

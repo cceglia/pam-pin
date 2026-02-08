@@ -10,6 +10,7 @@ typedef struct module_options {
     int pin_min_len;
     int pin_max_len;
     char pin_db[PATH_MAX];
+    char retry_dir[PATH_MAX];
 } module_options;
 
 void options_set_defaults(module_options *opts);

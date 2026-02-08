@@ -4,7 +4,8 @@ SRC := \
 	src/pam_pin.c \
 	src/options.c \
 	src/pin_store.c \
-	src/crypto.c
+	src/crypto.c \
+	src/retry_store.c
 
 OBJ := $(SRC:.c=.o)
 
